@@ -1,0 +1,58 @@
+﻿@model MasoudUniversity.Models.ViewModels.SchoolIndexData
+
+@{
+    ViewData["Title"] = "Classes";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Classes</h2>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Location</th>
+            <th>Teacher</th>
+            <th>Enrolled Students</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Classes)
+        {
+            string selectedRow = "";
+            if (item.Id == (int?)ViewData["ClassID"])
+            {
+                selectedRow = "success";
+            }
+            <tr class="@selectedRow">
+                <td>
+                    @Html.DisplayFor(modelItem => item.Title)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Location)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TeacherName)
+                </td>
+                <td>
+                    @{
+                        foreach (var student in item.Enrollments)
+                        {
+                            @student.Student.Id @:  @student.Student.StudentFullName <br />
+                        }
+                    }
+                </td>
+                <td>
+
+                    <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
+
+                    <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

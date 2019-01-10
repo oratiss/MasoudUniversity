@@ -1,0 +1,115 @@
+﻿@model MasoudUniversity.Models.ViewModels.SchoolIndexData
+
+@{
+    ViewData["Title"] = "Classes";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Classes</h2>
+
+@Html.ActionLink("Create New Class", "Create", "Classes", null, new { @class = "btn btn-primary btn-large pull-right" })
+
+<table class="table">
+    <thead>
+        <tr>
+            <th></th>
+            <th>ID/No</th>
+            <th>Title</th>
+            <th>Location</th>
+            <th>Teacher</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Classes)
+        {
+            string selectedRow = "";
+            if (item.Id == (int?)ViewData["ClassID"])
+            {
+                selectedRow = "success";
+            }
+            <tr class="@selectedRow">
+                <td>
+                    <a asp-action="Index" asp-route-id="@item.Id">Select</a>
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Id)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Title)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Location)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TeacherName)
+                </td>
+                @*<td>
+                        @{
+                            foreach (var student in item.Enrollments)
+                            {
+                                @student.Student.Id @:  @student.Student.StudentFullName <br />
+                            }
+                        }
+                    </td>*@
+                <td>
+
+                    <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
+                    <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (Model.Students != null)
+{
+    <h3>students Enrolled in Selected class</h3>
+    @Html.ActionLink("Add a new Student", "Create", "Students", null, new { @class = "btn btn-primary btn-large pull-right", @style="margin-bottom:15px;" })
+    <table class="table">
+        <tr>
+            <th></th>
+            <th>student ID</th>
+            <th>Student FullName</th>
+            <th>Age</th>
+            <th>GPA</th>
+            <th></th>
+        </tr>
+
+        @foreach (var item in Model.Students)
+        {
+            string selectedRow = "";
+            if (item.Id == (int?)ViewData["StudentID"])
+            {
+                selectedRow = "success";
+            }
+            <tr class="@selectedRow">
+                <td>
+                    @Html.ActionLink("Select", "Index", new { StudentID = item.Id })
+                </td>
+                <td>
+                    @item.Id
+                </td>
+                <td>
+                    @item.StudentFullName
+                </td>
+                <td>
+                    @item.Age
+                </td>
+                <td>
+                    @item.GPA
+                </td>
+                <td>
+                    <a asp-action="Edit" asp-controller="Students" asp-route-id="@item.Id">Edit</a> |
+                    <a asp-action="Delete" asp-controller="Students" asp-route-id="@item.Id">Delete</a>
+                </td>
+            </tr>
+        }
+
+    </table>
+}
+
+<br/>
+<br />
+<p>Do you think that this report is confusing? You can check explicit report <a asp-action="Index2" asp-controller="Classes">here!</a></p>
+<br />
