@@ -65,7 +65,8 @@
 @if (Model.Students != null)
 {
     <h3>students Enrolled in Selected class</h3>
-    @Html.ActionLink("Add a new Student", "Create", "Students", null, new { @class = "btn btn-primary btn-large pull-right", @style="margin-bottom:15px;" })
+    <p>you can also edit/delete each student here individually(without his/her membership consideration in a class). In order to add/edit a class students, add/edit a class from table above.</p>
+    @Html.ActionLink("Add a new Student to School", "Create", "Students", null, new { @class = "btn btn-primary btn-large pull-right", @style="margin-bottom:15px;" })
     <table class="table">
         <tr>
             <th></th>

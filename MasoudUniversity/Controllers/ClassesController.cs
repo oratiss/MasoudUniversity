@@ -86,6 +86,9 @@ namespace MasoudUniversity.Controllers
         // GET: Classes/Create
         public IActionResult Create()
         {
+            var @class = new Class();
+            @class.Enrollments = new List<Enrollment>();
+            PopulateAssignedStudentData(@class);
             return View();
         }
 
@@ -94,14 +97,24 @@ namespace MasoudUniversity.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Title,Location,TeacherName")] Class @class)
+        public async Task<IActionResult> Create([Bind("Id,Title,Location,TeacherName")] Class @class, string[] selectedStudents)
         {
+            if (selectedStudents != null)
+            {
+                @class.Enrollments = new List<Enrollment>();
+                foreach (var student in selectedStudents)
+                {
+                    var StudentToAdd = new Enrollment { ClassID = @class.Id, StudentID = int.Parse(student) };
+                    @class.Enrollments.Add(StudentToAdd);
+                }
+            }
             if (ModelState.IsValid)
             {
                 _context.Add(@class);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
+            PopulateAssignedStudentData(@class);
             return View(@class);
         }
 
@@ -112,13 +125,35 @@ namespace MasoudUniversity.Controllers
             {
                 return NotFound();
             }
+            var @class = await _context.Classes
+           .Include(c => c.Enrollments)
+           .ThenInclude(c => c.Student)
+           .AsNoTracking()
+           .SingleOrDefaultAsync(m => m.Id == id);
 
-            var @class = await _context.Classes.SingleOrDefaultAsync(m => m.Id == id);
             if (@class == null)
             {
                 return NotFound();
             }
+            PopulateAssignedStudentData(@class);
             return View(@class);
+        }
+
+        private void PopulateAssignedStudentData(Class @class)
+        {
+            var allStudents = _context.Students;
+            var classStudents = new HashSet<int>(@class.Enrollments.Select(c => c.StudentID));
+            var viewModel = new List<AssignedStudentData>();
+            foreach (var Student in allStudents)
+            {
+                viewModel.Add(new AssignedStudentData
+                {
+                    SrudentID = Student.Id,
+                    StudentFullName = Student.StudentFullName,
+                    Assigned = classStudents.Contains(Student.Id)
+                });
+            }
+            ViewData["Students"] = viewModel;
         }
 
         // POST: Classes/Edit/5
@@ -126,36 +161,75 @@ namespace MasoudUniversity.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Location,TeacherName")] Class @class)
+        public async Task<IActionResult> Edit(int? id, string[] selectedStudents)
         {
-            if (id != @class.Id)
+
+            if (id == null)
             {
                 return NotFound();
             }
 
-            if (ModelState.IsValid)
+            var ClassToUpdate = await _context.Classes
+                .Include(i => i.Enrollments)
+                    .ThenInclude(i => i.Student)
+                .SingleOrDefaultAsync(m => m.Id == id);
+
+            if (await TryUpdateModelAsync<Class>(
+                ClassToUpdate,
+                "",
+                i => i.Title, i => i.Location, i => i.TeacherName, i => i.Enrollments))
             {
+
+                UpdateClassStudents(selectedStudents, ClassToUpdate);
                 try
                 {
-                    _context.Update(@class);
                     await _context.SaveChangesAsync();
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (DbUpdateException /* ex */)
                 {
-                    if (!ClassExists(@class.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    //Log the error (uncomment ex variable name and write a log.)
+                    ModelState.AddModelError("", "Unable to save changes. " +
+                        "Try again, and if the problem persists, " +
+                        "see your system administrator.");
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(@class);
+            UpdateClassStudents(selectedStudents, ClassToUpdate);
+            PopulateAssignedStudentData(ClassToUpdate);
+            return View(ClassToUpdate);
         }
 
+        private void UpdateClassStudents(string[] selectedStudents, Class ClassToUpdate)
+        {
+            if (selectedStudents == null)
+            {
+                ClassToUpdate.Enrollments = new List<Enrollment>();
+                return;
+            }
+
+            var selectedStudentsHS = new HashSet<string>(selectedStudents);
+            var ClassStudents = new HashSet<int>
+                (ClassToUpdate.Enrollments.Select(e => e.Student.Id));
+            foreach (var student in _context.Students)
+            {
+                if (selectedStudentsHS.Contains(student.Id.ToString()))
+                {
+                    if (!ClassStudents.Contains(student.Id))
+                    {
+                        ClassToUpdate.Enrollments.Add(new Enrollment { ClassID = ClassToUpdate.Id, StudentID = student.Id });
+                    }
+                }
+                else
+                {
+
+                    if (ClassStudents.Contains(student.Id))
+                    {
+                        Enrollment studentToRemove = ClassToUpdate.Enrollments.SingleOrDefault(e => e.StudentID == student.Id);
+                        _context.Remove(studentToRemove);
+                    }
+                }
+            }
+        }
         // GET: Classes/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
@@ -179,7 +253,10 @@ namespace MasoudUniversity.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var @class = await _context.Classes.SingleOrDefaultAsync(m => m.Id == id);
+            Class @class = await _context.Classes
+            .Include(c => c.Enrollments)
+            .SingleAsync(c =>c.Id == id);
+
             _context.Classes.Remove(@class);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
